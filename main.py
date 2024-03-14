@@ -11,6 +11,7 @@ from fastapi.responses import Response
 app = FastAPI()
 
 SECRET_KEY = '251ab5630436796f0091262ff7680380'
+PASSWORD_SALT = '161ab0000436123f0091262ff7480381'
 
 
 def sing_data(data: str) -> str:
@@ -29,10 +30,16 @@ def get_username_from_signed_string(username_signed: str) -> Optional[str]:
         return username
 
 
+def verify_password(username: str, password: str) -> bool:
+    password_hash = hashlib.sha256((password + PASSWORD_SALT).encode()).hexdigest().lower()
+    stored_password_hash = users[username]['password'].lower()
+    return password_hash == stored_password_hash
+
+
 users = {
     "kirill@user.com": {
         'name': 'Кирилл',
-        'password': '1234',
+        'password': '8cb3e6b88ba5c2d1898dd95b55b07d39fdc7a5de75d3ae6a8440291df3974bed',
         'balance': 100_000,
     }
 }
@@ -61,7 +68,7 @@ def index_page(username: Optional[str] = Cookie(default=None)):
 @app.post("/login")
 def process_login_page(username: str = Form(...), password: str = Form(...)):
     user = users.get(username)
-    if not user or user['password'] != password:
+    if not user or not verify_password(username, password):
         return Response('Не пиши сюда!', media_type='text/html')
 
     response = Response(f"Ваш логин {username}, ваш пароль {password}", media_type="text/html")
